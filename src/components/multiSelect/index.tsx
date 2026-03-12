@@ -1,0 +1,119 @@
+import { Icon } from "@iconify/react";
+import { useState, useRef, useEffect } from "react";
+
+interface SelectedOption {
+  label: string;
+  amount: number;
+}
+
+interface MultiSelectProps {
+  options: string[];
+  value?: SelectedOption[];
+  onChange?: (value: SelectedOption[]) => void;
+  placeholder?: string;
+}
+
+export default function MultiSelect({
+  options,
+  value = [],
+  onChange,
+  placeholder = "Select The Options",
+}: MultiSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleOption = (option: string) => {
+    const exists = value.find((v) => v.label === option);
+    const newValue = exists
+      ? value.filter((v) => v.label !== option)
+      : [...value, { label: option, amount: 0 }];
+    onChange?.(newValue);
+  };
+
+  const updateAmount = (option: string, amountStr: string) => {
+    const amount = amountStr === "" ? 0 : Number(amountStr);
+    const newValue = value.map((v) =>
+      v.label === option ? { ...v, amount } : v,
+    );
+    onChange?.(newValue);
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <label className="absolute px-1 text-xs bg-white -top-2 left-5 text-light">
+        {placeholder}
+      </label>
+
+      <div
+        className="flex items-center justify-between px-4 py-2 bg-white border rounded-md cursor-pointer min-h-14 border-primary"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex flex-wrap gap-2">
+          {value.length > 0 ? (
+            value.map((item, idx) => (
+              <span
+                key={idx}
+                className="px-2 py-1 text-xs text-white rounded-md bg-primary"
+              >
+                {item.label}: {item.amount}
+              </span>
+            ))
+          ) : (
+            <span className="text-sm text-light">Select options</span>
+          )}
+        </div>
+        <Icon
+          icon="icon-park-outline:down"
+          className={`transition-transform text-primary ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </div>
+
+      {isOpen && (
+        <ul className="absolute mt-1 w-full bg-[#E5EBF7] rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          {options.map((option, idx) => {
+            const selected = value.find((v) => v.label === option);
+
+            return (
+              <li
+                key={idx}
+                className="flex items-center justify-between gap-2 px-4 py-2 text-sm"
+              >
+                <div
+                  className={`cursor-pointer ${
+                    selected ? "text-primary" : "text-heading"
+                  }`}
+                  onClick={() => toggleOption(option)}
+                >
+                  {option}
+                </div>
+                {selected && (
+                  <input
+                    type="number"
+                    value={selected.amount}
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => updateAmount(option, e.target.value)}
+                    className="w-20 px-2 py-1 text-sm border rounded-md border-light/48 focus:outline-0"
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
